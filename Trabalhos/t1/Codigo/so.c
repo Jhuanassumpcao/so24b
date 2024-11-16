@@ -26,7 +26,7 @@
 
 #define TAM_TABELA_PROC 16
 
-#define escal_MODO escal_MODO_CIRCULAR
+#define escal_MODO escal_MODO_PRIORITARIO
 
 typedef struct so_metricas_t so_metricas_t;
 
@@ -1030,15 +1030,15 @@ static void so_atualiza_metricas(so_t *self, int delta)
 
 
 static void so_imprime_metricas(so_t *self) {
-    FILE *file = fopen("metricas.md", "w");
+    FILE *file = fopen("metricas.md", "a"); // Modo de abertura em append
     if (file == NULL) {
         perror("Erro ao abrir o arquivo para escrita");
         return;
     }
 
-    fprintf(file, "# Métricas do Sistema Operacional\n\n");
+    fprintf(file, "\n# Métricas do Sistema Operacional\n\n");
 
-    // informacoes do sistema operacional
+    // Informações do sistema operacional
     fprintf(file, "## Informações Gerais\n");
     fprintf(file, "| Número de Processos | Tempo de Execução | Tempo Ocioso | Número de Preempções |\n");
     fprintf(file, "|---------------------|-------------------|--------------|----------------------|\n");
@@ -1048,7 +1048,7 @@ static void so_imprime_metricas(so_t *self) {
             self->metricas.t_ocioso,
             self->metricas.n_preempcoes);
 
-    // informacoes de interrupcoes
+    // Informações de interrupções
     fprintf(file, "\n## Interrupções\n");
     fprintf(file, "| IRQ | Número de Ocorrências |\n");
     fprintf(file, "|-----|------------------------|\n");
@@ -1056,7 +1056,24 @@ static void so_imprime_metricas(so_t *self) {
         fprintf(file, "| %d | %d |\n", i, self->metricas.n_irqs[i]);
     }
 
-    // metricas dos estados dos processos (vezes)
+    // Métricas detalhadas dos processos
+    fprintf(file, "\n## Métricas dos Processos\n");
+    fprintf(file, "| PID | Número de Preempções | Tempo de Retorno | Tempo de Resposta |\n");
+    fprintf(file, "|-----|-----------------------|------------------|-------------------|\n");
+    for (int i = 0; i < self->processos.qtd; i++) {
+        process_t *proc = self->processos.tabela[i];
+
+        process_metricas_t proc_metricas_atual = process_metricas(proc);
+
+        int pid = process_id(proc);                  // ID do processo
+        int n_preempcoes = proc_metricas_atual.n_preempcoes; // Número de preempções
+        int tempo_retorno = proc_metricas_atual.t_retorno;   // Tempo de retorno
+        int t_resposta = proc_metricas_atual.t_resposta;     // Tempo de resposta
+
+        fprintf(file, "| %d | %d | %d | %d |\n", pid, n_preempcoes, tempo_retorno, t_resposta);
+    }
+
+    // Métricas dos estados dos processos (vezes)
     fprintf(file, "\n## Número de Vezes por Estado\n");
     fprintf(file, "| PID ");
     for (int i = 0; i < N_process_ESTADO; i++) {
@@ -1081,7 +1098,7 @@ static void so_imprime_metricas(so_t *self) {
         fprintf(file, "|\n");
     }
 
-    // metricas dos estados dos processos (tempo)
+    // Métricas dos estados dos processos (tempo)
     fprintf(file, "\n## Tempo por Estado\n");
     fprintf(file, "| PID ");
     for (int i = 0; i < N_process_ESTADO; i++) {
@@ -1107,8 +1124,9 @@ static void so_imprime_metricas(so_t *self) {
     }
 
     fclose(file);
-    printf("Métricas salvas no arquivo 'metricas.md'.\n");
+    printf("Métricas adicionadas ao arquivo 'metricas.md'.\n");
 }
+
 
 
 // CARGA DE PROGRAMA {{{1
