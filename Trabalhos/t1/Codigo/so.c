@@ -12,7 +12,6 @@
 
 #include "conpt.h"
 #include "esc.h"
-#include "tabela.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
