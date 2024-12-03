@@ -2,30 +2,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-struct process_t {
-    int id;                         // identificador unico do processo
-    double prioridade;              // prioridade do processo
-    process_estado_t estado;           // estado atual do processo (pronto, executando, etc.)
-    
-    // Detalhes do bloqueio do processo
-    struct {
-        int motivo;                 // motivo do bloqueio
-        int argumento;              // argumento associado ao motivo do bloqueio
-    } bloqueio;
-    
-    // identificador de porta do processo
-    int porta;
-    
-    // registradores do processo
-    struct {
-        int PC;                    
-        int A;                     
-        int X;                     
-    } registradores;
-    
-    // metricas associadas ao processo
-    process_metricas_t metricas;
-};
 
 // macro para registrar transições de estado
 #define MUDAR_ESTADO(process, novo_estado) \
@@ -57,7 +33,7 @@ process_t *process_cria(int id, int end) {
     process->estado = process_ESTADO_PRONTO;
     process->bloqueio.motivo = 0;
     process->bloqueio.argumento = 0;
-    process->porta = -1;
+    process->dispositivo_es = -1;
     process->registradores.PC = end;
     process->registradores.A = 0;
     process->registradores.X = 0;
@@ -137,13 +113,13 @@ process_bloq_motivo_t process_bloq_motivo(process_t *process) { return process->
 
 int process_bloq_arg(process_t *process) { return process->bloqueio.argumento; }
 
-int process_porta(process_t *process) { return process->porta; }
+int process_dispositivo_es(process_t *process) { return process->dispositivo_es; }
 
-void process_atribui_porta(process_t *process, int porta) {
-    if (porta != -1) process->porta = porta;
+void process_atribui_dispositivo_es(process_t *process, int dispositivo_es) {
+    if (dispositivo_es != -1) process->dispositivo_es = dispositivo_es;
 }
 
-void process_desatribui_porta(process_t *process) { process->porta = -1; }
+void process_desatribui_dispositivo_es(process_t *process) { process->dispositivo_es = -1; }
 
 process_metricas_t process_metricas(process_t *process) { return process->metricas; }
 

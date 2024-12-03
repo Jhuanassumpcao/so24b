@@ -10,7 +10,7 @@
 #include "programa.h"
 #include "instrucao.h"
 
-#include "conpt.h"
+#include "cones.h"
 #include "esc.h"
 
 #include <stdlib.h>
@@ -56,7 +56,7 @@ struct so_t {
   mem_t *mem;
   es_t *es;
   console_t *console;
-  con_pt_t *com;
+  con_es_t *com;
   escal_t *esc;
 
   tabela_process_t processos;
@@ -81,7 +81,7 @@ static void so_mata_proc(so_t *self, process_t *process);
 static void so_executa_proc(so_t *self, process_t *process);
 static void so_bloqueia_proc(so_t *self, process_t *process, process_bloq_motivo_t motivo, int arg);
 static void so_desbloqueia_proc(so_t *self, process_t *process);
-static void so_assegura_porta_proc(so_t *self, process_t *process);
+static void so_assegura_dispositivo_es_proc(so_t *self, process_t *process);
 static bool so_deve_escalonar(so_t *self);
 static bool so_tem_trabalho(so_t *self);
 
@@ -125,7 +125,7 @@ so_t *so_cria(cpu_t *cpu, mem_t *mem, es_t *es, console_t *console)
   self->es = es;
   self->console = console;
   self->esc = escal_cria(escal_MODO);
-  self->com = con_pt_cria(es);
+  self->com = con_es_cria(es);
 
 
   self->process_corrente = NULL;
@@ -138,10 +138,10 @@ so_t *so_cria(cpu_t *cpu, mem_t *mem, es_t *es, console_t *console)
 
   self->erro_interno = false;
 
-  con_pt_registra_porta(self->com, D_TERM_A_TECLADO, D_TERM_A_TECLADO_OK, D_TERM_A_TELA, D_TERM_A_TELA_OK);
-  con_pt_registra_porta(self->com, D_TERM_B_TECLADO, D_TERM_B_TECLADO_OK, D_TERM_B_TELA, D_TERM_B_TELA_OK);
-  con_pt_registra_porta(self->com, D_TERM_C_TECLADO, D_TERM_C_TECLADO_OK, D_TERM_C_TELA, D_TERM_C_TELA_OK);
-  con_pt_registra_porta(self->com, D_TERM_D_TECLADO, D_TERM_D_TECLADO_OK, D_TERM_D_TELA, D_TERM_D_TELA_OK);
+  con_es_registra_dispositivo_es(self->com, D_TERM_A_TECLADO, D_TERM_A_TECLADO_OK, D_TERM_A_TELA, D_TERM_A_TELA_OK);
+  con_es_registra_dispositivo_es(self->com, D_TERM_B_TECLADO, D_TERM_B_TECLADO_OK, D_TERM_B_TELA, D_TERM_B_TELA_OK);
+  con_es_registra_dispositivo_es(self->com, D_TERM_C_TECLADO, D_TERM_C_TECLADO_OK, D_TERM_C_TELA, D_TERM_C_TELA_OK);
+  con_es_registra_dispositivo_es(self->com, D_TERM_D_TECLADO, D_TERM_D_TECLADO_OK, D_TERM_D_TELA, D_TERM_D_TELA_OK);
 
   // quando a CPU executar uma instrução CHAMAC, deve chamar a função
   //   so_trata_interrupcao, com primeiro argumento um ptr para o SO
@@ -172,7 +172,7 @@ so_t *so_cria(cpu_t *cpu, mem_t *mem, es_t *es, console_t *console)
 
 void so_destroi(so_t *self) {
     cpu_define_chamaC(self->cpu, NULL, NULL);
-    con_pt_destroi(self->com);
+    con_es_destroi(self->com);
     escal_destroi(self->esc);
 
     // destroi todos os processos
@@ -405,17 +405,17 @@ static void so_trata_bloq(so_t *self, process_t *process)
 
 static void so_trata_bloq_leitura(so_t *self, process_t *process)
 {
-    int porta = process_porta(process);
+    int dispositivo_es = process_dispositivo_es(process);
 
-    // retorna imediatamente se a porta for invalida
-    if (porta == -1) {
+    // retorna imediatamente se a dispositivo_es for invalida
+    if (dispositivo_es == -1) {
         return;
     }
 
     int dado;
 
-    // le da porta e so prossegue se deu certo
-    if (!con_pt_le_porta(self->com, porta, &dado)) {
+    // le da dispositivo_es e so prossegue se deu certo
+    if (!con_es_le_dispositivo_es(self->com, dispositivo_es, &dado)) {
         return;
     }
 
@@ -429,21 +429,21 @@ static void so_trata_bloq_leitura(so_t *self, process_t *process)
 
 static void so_trata_bloq_escrita(so_t *self, process_t *process)
 {
-    // garante que o processo tenha a porta certa
-    so_assegura_porta_proc(self, process);
+    // garante que o processo tenha a dispositivo_es certa
+    so_assegura_dispositivo_es_proc(self, process);
 
-    // pega a porta e o argumento para escrita
-    int porta = process_porta(process);
+    // pega a dispositivo_es e o argumento para escrita
+    int dispositivo_es = process_dispositivo_es(process);
 
-    // retorna se a porta for invalida
-    if (porta == -1) {
+    // retorna se a dispositivo_es for invalida
+    if (dispositivo_es == -1) {
         return;
     }
 
     int dado = process_bloq_arg(process);
 
-    // tenta escrever na porta e retorna se falhar
-    if (!con_pt_escreve_porta(self->com, porta, dado)) {
+    // tenta escrever na dispositivo_es e retorna se falhar
+    if (!con_es_escreve_dispositivo_es(self->com, dispositivo_es, dado)) {
         return;
     }
 
@@ -647,21 +647,21 @@ static void so_chamada_le(so_t *self)
         return;
     }
 
-    // assegura que o processo esta associado a uma porta valida
-    so_assegura_porta_proc(self, process);
+    // assegura que o processo esta associado a uma dispositivo_es valida
+    so_assegura_dispositivo_es_proc(self, process);
 
-    // pega a porta associada ao processo
-    int porta = process_porta(process);
+    // pega a dispositivo_es associada ao processo
+    int dispositivo_es = process_dispositivo_es(process);
 
-    // verifica se a porta é valida
-    if (porta == -1) {
-        console_printf("SO: processo %d - sem porta válida para leitura", process_id(process));
+    // verifica se a dispositivo_es é valida
+    if (dispositivo_es == -1) {
+        console_printf("SO: processo %d - sem dispositivo_es válida para leitura", process_id(process));
         return;
     }
 
     // tenta realizar a leitura diretamente
     int dado;
-    if (con_pt_le_porta(self->com, porta, &dado)) {
+    if (con_es_le_dispositivo_es(self->com, dispositivo_es, &dado)) {
         // leitura certa: armazena o dado no registrador A do processo
         process_define_A(process, dado);
     } else {
@@ -688,23 +688,23 @@ static void so_chamada_escr(so_t *self)
         return;
     }
 
-    // assegura que o processo esta associado a uma porta valida
-    so_assegura_porta_proc(self, process);
+    // assegura que o processo esta associado a uma dispositivo_es valida
+    so_assegura_dispositivo_es_proc(self, process);
 
-    // pega a porta associada ao processo
-    int porta = process_porta(process);
+    // pega a dispositivo_es associada ao processo
+    int dispositivo_es = process_dispositivo_es(process);
 
-    // verifica se a porta é valida antes de tentar escrever
-    if (porta == -1) {
-        console_printf("SO: processo %d - sem porta válida para escrita", process_id(process));
+    // verifica se a dispositivo_es é valida antes de tentar escrever
+    if (dispositivo_es == -1) {
+        console_printf("SO: processo %d - sem dispositivo_es válida para escrita", process_id(process));
         return;
     }
 
     // pega o valor a ser escrito do registrador X do processo
     int dado = process_X(process);
 
-    // tenta realizar a escrita na porta
-    if (con_pt_escreve_porta(self->com, porta, dado)) {
+    // tenta realizar a escrita na dispositivo_es
+    if (con_es_escreve_dispositivo_es(self->com, dispositivo_es, dado)) {
         // escrita certa: armazena 0 no registrador A do processo
         process_define_A(process, 0);
     } else {
@@ -926,10 +926,10 @@ static void so_mata_proc(so_t *self, process_t *process)
 {
     if (!process) return; // nenhuma operacao com ponteiro nulo
 
-    int porta = process_porta(process);
-    if (porta != -1) {
-        con_pt_libera_porta(self->com, porta);
-        process_desatribui_porta(process);
+    int dispositivo_es = process_dispositivo_es(process);
+    if (dispositivo_es != -1) {
+        con_es_libera_dispositivo_es(self->com, dispositivo_es);
+        process_desatribui_dispositivo_es(process);
     }
 
     // remove o processo da estrutura e encerra diretamente
@@ -978,13 +978,13 @@ static void so_desbloqueia_proc(so_t *self, process_t *process)
     }
 }
 
-static void so_assegura_porta_proc(so_t *self, process_t *process)
+static void so_assegura_dispositivo_es_proc(so_t *self, process_t *process)
 {
-    if (process != NULL && process_porta(process) == -1) {
-        int porta = con_pt_porta_disponivel(self->com);
-        if (porta != -1) {
-            process_atribui_porta(process, porta);
-            con_pt_reserva_porta(self->com, porta);
+    if (process != NULL && process_dispositivo_es(process) == -1) {
+        int dispositivo_es = con_es_dispositivo_es_disponivel(self->com);
+        if (dispositivo_es != -1) {
+            process_atribui_dispositivo_es(process, dispositivo_es);
+            con_es_reserva_dispositivo_es(self->com, dispositivo_es);
         }
     }
 }
