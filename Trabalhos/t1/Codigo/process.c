@@ -6,7 +6,7 @@
 // macro para registrar transições de estado
 #define MUDAR_ESTADO(process, novo_estado) \
     do { \
-        if ((process)->estado == process_ESTADO_EXECUTANDO && (novo_estado) == process_ESTADO_PRONTO) { \
+        if ((process)->estado == ESTADO_EXECUTANDO && (novo_estado) == ESTADO_PRONTO) { \
             (process)->metricas.n_preempcoes++; \
         } \
         (process)->metricas.estados[(novo_estado)].n_vezes++; \
@@ -17,11 +17,11 @@
 static inline void inicializa_metricas(process_metricas_t *metricas) {
     metricas->t_retorno = 0;
     metricas->n_preempcoes = 0;
-    for (int i = 0; i < N_process_ESTADO; ++i) {
+    for (int i = 0; i < N_ESTADO; ++i) {
         metricas->estados[i].n_vezes = 0;
         metricas->estados[i].t_total = 0;
     }
-    metricas->estados[process_ESTADO_PRONTO].n_vezes = 1;
+    metricas->estados[ESTADO_PRONTO].n_vezes = 1;
 }
 
 process_t *process_cria(int id, int end) {
@@ -30,7 +30,7 @@ process_t *process_cria(int id, int end) {
 
     process->id = id;
     process->prioridade = 0.5;
-    process->estado = process_ESTADO_PRONTO;
+    process->estado = ESTADO_PRONTO;
     process->bloqueio.motivo = 0;
     process->bloqueio.argumento = 0;
     process->dispositivo_es = -1;
@@ -51,16 +51,16 @@ int process_id(process_t *process) { return process->id; }
 process_estado_t process_estado(process_t *process) { return process->estado; }
 
 void process_executa(process_t *process) {
-    if (process->estado == process_ESTADO_PRONTO) MUDAR_ESTADO(process, process_ESTADO_EXECUTANDO);
+    if (process->estado == ESTADO_PRONTO) MUDAR_ESTADO(process, ESTADO_EXECUTANDO);
 }
 
 void process_para(process_t *process) {
-    if (process->estado == process_ESTADO_EXECUTANDO) MUDAR_ESTADO(process, process_ESTADO_PRONTO);
+    if (process->estado == ESTADO_EXECUTANDO) MUDAR_ESTADO(process, ESTADO_PRONTO);
 }
 
 void process_bloqueia(process_t *process, process_bloq_motivo_t motivo, int arg) {
-    if (process->estado == process_ESTADO_EXECUTANDO || process->estado == process_ESTADO_PRONTO) {
-        MUDAR_ESTADO(process, process_ESTADO_BLOQUEADO);
+    if (process->estado == ESTADO_EXECUTANDO || process->estado == ESTADO_PRONTO) {
+        MUDAR_ESTADO(process, ESTADO_BLOQUEADO);
         process->bloqueio.motivo = motivo;
         process->bloqueio.argumento = arg;
     }
@@ -76,20 +76,20 @@ double process_calcula_prioridade(process_t *process, int t_exec, int quantum)
 }
 
 void process_desbloqueia(process_t *process) {
-    if (process->estado == process_ESTADO_BLOQUEADO) MUDAR_ESTADO(process, process_ESTADO_PRONTO);
+    if (process->estado == ESTADO_BLOQUEADO) MUDAR_ESTADO(process, ESTADO_PRONTO);
 }
 
 void process_encerra(process_t *process) {
-    MUDAR_ESTADO(process, process_ESTADO_MORTO);
+    MUDAR_ESTADO(process, MORTO);
 }
 
 void process_atualiza_metricas(process_t *process, int delta) {
-    if (process->estado != process_ESTADO_MORTO) process->metricas.t_retorno += delta;
+    if (process->estado != MORTO) process->metricas.t_retorno += delta;
     process->metricas.estados[process->estado].t_total += delta;
 
-    if (process->metricas.estados[process_ESTADO_PRONTO].n_vezes > 0) {
-        process->metricas.t_resposta = process->metricas.estados[process_ESTADO_PRONTO].t_total / 
-                                    process->metricas.estados[process_ESTADO_PRONTO].n_vezes;
+    if (process->metricas.estados[ESTADO_PRONTO].n_vezes > 0) {
+        process->metricas.t_resposta = process->metricas.estados[ESTADO_PRONTO].t_total / 
+                                    process->metricas.estados[ESTADO_PRONTO].n_vezes;
     }
 }
 
@@ -125,5 +125,5 @@ process_metricas_t process_metricas(process_t *process) { return process->metric
 
 char *process_estado_nome(process_estado_t estado) {
     static const char *nomes_estados[] = {"Pronto", "Executando", "Bloqueado", "Morto"};
-    return (estado >= 0 && estado < N_process_ESTADO) ? (char *)nomes_estados[estado] : "Desconhecido";
+    return (estado >= 0 && estado < N_ESTADO) ? (char *)nomes_estados[estado] : "Desconhecido";
 }

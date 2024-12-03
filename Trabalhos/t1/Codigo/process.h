@@ -2,20 +2,20 @@
 #define process_H
 
 typedef enum {
-    process_ESTADO_EXECUTANDO,
-    process_ESTADO_PRONTO,
-    process_ESTADO_BLOQUEADO,
-    process_ESTADO_MORTO,
-    N_process_ESTADO
+    ESTADO_EXECUTANDO,
+    ESTADO_PRONTO,
+    ESTADO_BLOQUEADO,
+    MORTO,
+    N_ESTADO
 } process_estado_t;
 
 
 
 typedef enum {
-    process_BLOQ_LEITURA,
-    process_BLOQ_ESCRITA,
-    process_BLOQ_ESPERA_PROC,
-    N_process_BLOQ
+    BLOQ_LEITURA,
+    BLOQ_ESCRITA,
+    BLOQ_ESPERA_PROCESS,
+    N_BLOQ
 } process_bloq_motivo_t;
 
 typedef struct process_t process_t;
@@ -35,7 +35,7 @@ struct process_metricas_t
     int t_retorno;
     int t_resposta;
 
-    process_estado_metricas_t estados[N_process_ESTADO];
+    process_estado_metricas_t estados[N_ESTADO];
 };
 
 struct process_t {

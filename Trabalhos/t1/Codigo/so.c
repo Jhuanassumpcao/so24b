@@ -294,7 +294,7 @@ static void so_trata_pendencias(so_t *self)
 
     for (int i = 0; i < qtd; i++) {
         process_t *process = tabela[i]; // acesso direto a tabela
-        if (process_estado(process) == process_ESTADO_BLOQUEADO) {
+        if (process_estado(process) == ESTADO_BLOQUEADO) {
             so_trata_bloq(self, process); // trata o processo bloqueado
         }
     }
@@ -388,13 +388,13 @@ static void so_trata_bloq(so_t *self, process_t *process)
 
   switch (motivo)
   {
-  case process_BLOQ_LEITURA:
+  case BLOQ_LEITURA:
     so_trata_bloq_leitura(self, process);
     break;
-  case process_BLOQ_ESCRITA:
+  case BLOQ_ESCRITA:
     so_trata_bloq_escrita(self, process);
     break;
-  case process_BLOQ_ESPERA_PROC:
+  case BLOQ_ESPERA_PROCESS:
     so_trata_bloq_espera_proc(self, process);
     break;
   default:
@@ -464,7 +464,7 @@ static void so_trata_bloq_espera_proc(so_t *self, process_t *process)
     process_t *process_alvo = so_busca_proc(self, pid_alvo);
 
     // verifica se o processo alvo nao existe ou esta morto
-    if (!process_alvo || process_estado(process_alvo) == process_ESTADO_MORTO) {
+    if (!process_alvo || process_estado(process_alvo) == MORTO) {
         process_define_A(process, 0);  // marca o processo atual como concluido
         so_desbloqueia_proc(self, process);  // desbloqueia o processo atual
 
@@ -667,7 +667,7 @@ static void so_chamada_le(so_t *self)
     } else {
         // Leitura nao disponivel: bloqueia o processo para leitura futura
         console_printf("SO: processo %d - bloqueia para leitura", process_id(process));
-        so_bloqueia_proc(self, process, process_BLOQ_LEITURA, 0);
+        so_bloqueia_proc(self, process, BLOQ_LEITURA, 0);
     }
 }
 
@@ -710,7 +710,7 @@ static void so_chamada_escr(so_t *self)
     } else {
         // escrita nao disponivel: bloqueia o processo para escrita futura
         console_printf("SO: processo %d - bloqueia para escrita", process_id(process));
-        so_bloqueia_proc(self, process, process_BLOQ_ESCRITA, dado);
+        so_bloqueia_proc(self, process, BLOQ_ESCRITA, dado);
     }
 }
 
@@ -844,7 +844,7 @@ static void so_chamada_espera_proc(so_t *self)
   }
 
   // verifica se o processo alvo ja esta morto
-  if (process_estado(process_alvo) == process_ESTADO_MORTO) {
+  if (process_estado(process_alvo) == MORTO) {
     process_define_A(process, 0);
     return;
   }
@@ -855,7 +855,7 @@ static void so_chamada_espera_proc(so_t *self)
     process_id(process)
   );
 
-  so_bloqueia_proc(self, process, process_BLOQ_ESPERA_PROC, pid_alvo);
+  so_bloqueia_proc(self, process, BLOQ_ESPERA_PROCESS, pid_alvo);
 }
 
 
@@ -946,13 +946,13 @@ static void so_executa_proc(so_t *self, process_t *process)
     }
 
     // se ha um processo em execucao, pare e registre a preempcao
-    if (self->process_corrente && process_estado(self->process_corrente) == process_ESTADO_EXECUTANDO) {
+    if (self->process_corrente && process_estado(self->process_corrente) == ESTADO_EXECUTANDO) {
         process_para(self->process_corrente);
         self->metricas.n_preempcoes++;
     }
 
     // se o novo processo nao esta executando, inicie sua execucao
-    if (process && process_estado(process) != process_ESTADO_EXECUTANDO) {
+    if (process && process_estado(process) != ESTADO_EXECUTANDO) {
         process_executa(process);
     }
 
@@ -964,7 +964,7 @@ static void so_executa_proc(so_t *self, process_t *process)
 
 static void so_bloqueia_proc(so_t *self, process_t *process, process_bloq_motivo_t motivo, int arg)
 {
-    if (process != NULL && process_estado(process) != process_ESTADO_BLOQUEADO) {
+    if (process != NULL && process_estado(process) != ESTADO_BLOQUEADO) {
         escal_remove_proc(self->esc, process);
         process_bloqueia(process, motivo, arg);
     }
@@ -972,7 +972,7 @@ static void so_bloqueia_proc(so_t *self, process_t *process, process_bloq_motivo
 
 static void so_desbloqueia_proc(so_t *self, process_t *process)
 {
-    if (process != NULL && process_estado(process) == process_ESTADO_BLOQUEADO) {
+    if (process != NULL && process_estado(process) == ESTADO_BLOQUEADO) {
         process_desbloqueia(process);
         escal_insere_proc(self->esc, process);
     }
@@ -992,7 +992,7 @@ static void so_assegura_dispositivo_es_proc(so_t *self, process_t *process)
 static bool so_deve_escalonar(so_t *self)
 {
     if (!self->process_corrente ||
-        process_estado(self->process_corrente) != process_ESTADO_EXECUTANDO ||
+        process_estado(self->process_corrente) != ESTADO_EXECUTANDO ||
         self->temporizador.restante <= 0)
     {
         return true;
@@ -1004,7 +1004,7 @@ static bool so_tem_trabalho(so_t *self)
 {
     process_t **tabela = self->processos.tabela;
     for (int i = 0, qtd = self->processos.qtd; i < qtd; i++) {
-        if (process_estado(tabela[i]) != process_ESTADO_MORTO) {
+        if (process_estado(tabela[i]) != MORTO) {
             return true;
         }
     }
@@ -1075,13 +1075,13 @@ static void so_imprime_metricas(so_t *self) {
     // Métricas dos estados dos processos (vezes)
     fprintf(file, "\n## Número de Vezes por Estado\n");
     fprintf(file, "| PID ");
-    for (int i = 0; i < N_process_ESTADO; i++) {
+    for (int i = 0; i < N_ESTADO; i++) {
         fprintf(file, "| N_%s ", process_estado_nome(i));
     }
     fprintf(file, "|\n");
 
     fprintf(file, "|-----");
-    for (int i = 0; i < N_process_ESTADO; i++) {
+    for (int i = 0; i < N_ESTADO; i++) {
         fprintf(file, "|------");
     }
     fprintf(file, "|\n");
@@ -1091,7 +1091,7 @@ static void so_imprime_metricas(so_t *self) {
         process_metricas_t proc_metricas_atual = process_metricas(proc);
 
         fprintf(file, "| %d ", process_id(proc));
-        for (int j = 0; j < N_process_ESTADO; j++) {
+        for (int j = 0; j < N_ESTADO; j++) {
             fprintf(file, "| %d ", proc_metricas_atual.estados[j].n_vezes);
         }
         fprintf(file, "|\n");
@@ -1100,13 +1100,13 @@ static void so_imprime_metricas(so_t *self) {
     // Métricas dos estados dos processos (tempo)
     fprintf(file, "\n## Tempo por Estado\n");
     fprintf(file, "| PID ");
-    for (int i = 0; i < N_process_ESTADO; i++) {
+    for (int i = 0; i < N_ESTADO; i++) {
         fprintf(file, "| T_%s ", process_estado_nome(i));
     }
     fprintf(file, "|\n");
 
     fprintf(file, "|-----");
-    for (int i = 0; i < N_process_ESTADO; i++) {
+    for (int i = 0; i < N_ESTADO; i++) {
         fprintf(file, "|------");
     }
     fprintf(file, "|\n");
@@ -1116,7 +1116,7 @@ static void so_imprime_metricas(so_t *self) {
         process_metricas_t proc_metricas_atual = process_metricas(proc);
 
         fprintf(file, "| %d ", process_id(proc));
-        for (int j = 0; j < N_process_ESTADO; j++) {
+        for (int j = 0; j < N_ESTADO; j++) {
             fprintf(file, "| %d ", proc_metricas_atual.estados[j].t_total);
         }
         fprintf(file, "|\n");
