@@ -19,7 +19,19 @@ Este documento descreve a implementação de um sistema operacional simples com 
     - Implementação de um escalonador com prioridade, onde a prioridade é ajustada com base no tempo de execução e no quantum.
 
 
+    As métricas a seguir foram obtidas utilizando diferentes escalonadores (Simples, Round-Robin e Prioritário) e variando o intervalo de relógio entre 50 e 100, e o quantum entre 5 e 10:
 
+    1. **SIMPLES**
+        - **INTERVALO_RELOGIO = 50 e INTERVALO_QUANTUM = 5**
+        - **INTERVALO_RELOGIO = 100 e INTERVALO_QUANTUM = 10**
+
+    2. **CIRCULAR (Round-Robin)**
+        - **INTERVALO_RELOGIO = 50 e INTERVALO_QUANTUM = 5**
+        - **INTERVALO_RELOGIO = 100 e INTERVALO_QUANTUM = 10**
+
+    3. **PRIORITÁRIO**
+        - **INTERVALO_RELOGIO = 50 e INTERVALO_QUANTUM = 5**
+        - **INTERVALO_RELOGIO = 100 e INTERVALO_QUANTUM = 10**
 
 # Métricas do Sistema Operacional SIMPLES INTERVALO_RELOGIO = 50 e INTERVALO_QUANTUM = 5
 
@@ -278,3 +290,76 @@ Este documento descreve a implementação de um sistema operacional simples com 
 | 2 | 8874 | 3769 | 476 | 13753 |
 | 3 | 3654 | 10398 | 1422 | 11390 |
 | 4 | 5544 | 11772 | 9230 | 310 |
+
+
+# **Análise e Comparação dos Sistemas Operacionais Simulados**
+
+---
+
+## **Comparação Geral**
+
+### **Tempo de Execução e Tempo Ocioso**
+- **Intervalo Relógio SIMPLES (50, Quantum 5):**
+  - Tempo de execução: 27541 ms
+  - Tempo ocioso: 8753 ms  
+- **Intervalo Relógio SIMPLES (100, Quantum 10):**
+  - Tempo de execução: 27885 ms  
+  - Tempo ocioso: 8503 ms  
+- **Circular (50, Quantum 5):**
+  - Tempo de execução: 25355 ms  
+  - Tempo ocioso: 5931 ms  
+- **Circular (100, Quantum 10):**
+  - Tempo de execução: 27037 ms  
+  - Tempo ocioso: 8237 ms  
+- **Prioritário (50, Quantum 5):**
+  - Tempo de execução: 25283 ms  
+  - Tempo ocioso: 5856 ms  
+- **Prioritário (100, Quantum 10):**
+  - Tempo de execução: 27243 ms  
+  - Tempo ocioso: 8452 ms  
+
+**Conclusão Parcial:**  
+Os sistemas circulares e prioritários com intervalo de relógio menor (50) demonstraram menor tempo de execução e ocioso. Isso indica maior eficiência no uso de CPU para esses casos, embora possam causar mais interrupções.
+
+---
+
+### **Número de Preempções**
+- **SIMPLES (100, Quantum 10 e 5):** 0 preempções em ambos os casos.
+- **Circular (50, Quantum 5):** 43 preempções.
+- **Circular (100, Quantum 10):** 9 preempções.
+- **Prioritário (50, Quantum 5):** 22 preempções.
+- **Prioritário (100, Quantum 10):** 0 preempções.
+
+**Conclusão Parcial:**  
+Os algoritmos que utilizam abordagem circular apresentaram maior número de preempções, devido à alternância frequente entre os processos.
+
+---
+
+### **Tempo de Retorno e Tempo de Resposta**
+#### Melhor tempo médio de retorno:
+- **Circular (50, Quantum 5):**  
+  Média: (25355 + 16353 + 12311 + 24637) / 4 = **19664 ms**  
+
+#### Melhor tempo médio de resposta:
+- **Circular (50, Quantum 5):**  
+  Média: (5 + 184 + 324 + 94) / 4 = **151 ms**
+
+**Conclusão Parcial:**  
+O sistema circular com intervalos menores oferece os melhores tempos médios de retorno e resposta, beneficiando processos interativos.
+
+---
+
+### **Interrupções**
+- **IRQ 3 (Timer):**  
+  - O número de ocorrências varia diretamente com o intervalo de relógio e o quantum. Intervalos menores aumentam a quantidade de interrupções.  
+
+**Conclusão Parcial:**  
+Intervalos menores de relógio resultam em maior sobrecarga no sistema devido ao número mais elevado de interrupções, impactando a eficiência global.
+
+---
+
+## **Conclusões Finais**
+
+1. **Sistemas circulares com menor intervalo (50 ms) e menor quantum (5 ms)** mostraram-se os mais eficientes para retorno e resposta de processos, embora com maior número de interrupções e preempções.
+2. **Sistemas simples (100 ms)** apresentaram menor sobrecarga no sistema (0 preempções) e são mais adequados para cargas mais estáveis.
+3. **Sistemas prioritários** equilibram eficiência e desempenho, sendo indicados para ambientes onde processos com maior prioridade devem ser favorecidos.
